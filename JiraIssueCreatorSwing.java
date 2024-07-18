@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-public class JiraIssueCreatorSwing extends JFrame implements ActionListener {
+public class JiraIssueCreatorSwing extends JFrame implements ActionListener, ItemListener {
     // Swing components
     private JTextField tfSummary, tfProjectKey, tfIssueType;
     private JTextField tfEnvironment, tfClientName, tfApimClientId, tfProgramId, tfProgramName, tfRegion, tfCountryCode;
@@ -23,26 +23,30 @@ public class JiraIssueCreatorSwing extends JFrame implements ActionListener {
         setLayout(new GridLayout(0, 2, 10, 10)); // GridLayout for 2 columns
 
         // Initialize components
-        tfSummary = new JTextField();
-        tfProjectKey = new JTextField();
-        tfIssueType = new JTextField();
+        tfSummary = createTextField(20);
+        tfProjectKey = createTextField(20);
+        tfIssueType = createTextField(20);
 
-        tfEnvironment = new JTextField();
-        tfClientName = new JTextField();
-        tfApimClientId = new JTextField();
-        tfProgramId = new JTextField();
-        tfProgramName = new JTextField();
-        tfRegion = new JTextField();
-        tfCountryCode = new JTextField();
+        tfEnvironment = createTextField(20);
+        tfClientName = createTextField(20);
+        tfApimClientId = createTextField(20);
+        tfProgramId = createTextField(20);
+        tfProgramName = createTextField(20);
+        tfRegion = createTextField(20);
+        tfCountryCode = createTextField(20);
 
         cbClientType = new JComboBox<>(new String[]{"Normal", "PI"});
-        tfNotificationUrl = new JTextField();
+        cbClientType.setPreferredSize(new Dimension(150, cbClientType.getPreferredSize().height));
+        cbClientType.addItemListener(this);
+        tfNotificationUrl = createTextField(20);
         tfNotificationUrl.setVisible(false);
 
         cbNetworkType = new JComboBox<>(new String[]{"Normal", "VISA"});
-        tfProcessorId = new JTextField();
+        cbNetworkType.setPreferredSize(new Dimension(150, cbNetworkType.getPreferredSize().height));
+        cbNetworkType.addItemListener(this);
+        tfProcessorId = createTextField(20);
         tfProcessorId.setVisible(false);
-        tfBankId = new JTextField();
+        tfBankId = createTextField(20);
         tfBankId.setVisible(false);
 
         cbIdempotency = new JCheckBox();
@@ -74,10 +78,15 @@ public class JiraIssueCreatorSwing extends JFrame implements ActionListener {
         add(createLabelAndFieldPanel("Idempotency Feature (Y/N):", cbIdempotency));
         add(createLabelAndFieldPanel("Failsafe Feature (Y/N):", cbFailsafe));
         add(createLabelAndFieldPanel("ID Provisioning Automation (Y/N):", cbIdProvisioning));
-
-        add(btnSubmit);
-
+        add(createLabelAndFieldPanel("", btnSubmit));
+        
         setVisible(true);
+    }
+
+    private JTextField createTextField(int columns) {
+        JTextField textField = new JTextField(columns);
+        textField.setVisible(true); // Initially hide all text fields
+        return textField;
     }
 
     private JPanel createLabelAndFieldPanel(String labelText, Component fieldComponent) {
@@ -124,6 +133,23 @@ public class JiraIssueCreatorSwing extends JFrame implements ActionListener {
                         "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
+    }
+
+    @Override
+    public void itemStateChanged(ItemEvent e) {
+        if (e.getSource() == cbClientType) {
+            // Show/hide Notification URL based on Client Type selection
+            String selectedClientType = (String) cbClientType.getSelectedItem();
+            tfNotificationUrl.setVisible(selectedClientType.equals("PI"));
+        } else if (e.getSource() == cbNetworkType) {
+            // Show/hide Processor ID and Bank ID based on Network Type selection
+            String selectedNetworkType = (String) cbNetworkType.getSelectedItem();
+            tfProcessorId.setVisible(selectedNetworkType.equals("VISA"));
+            tfBankId.setVisible(selectedNetworkType.equals("VISA"));
+        }
+        // Repaint the frame to reflect changes
+        revalidate();
+        repaint();
     }
 
     private String generateDescription(String environment, String clientName, String apimClientId,
@@ -182,10 +208,6 @@ public class JiraIssueCreatorSwing extends JFrame implements ActionListener {
         conn.setRequestProperty("Authorization", "Basic " + encodedAuth);
 
         // Send request
-        conn.getOutputStream().write(payload.getBytes());
-        conn.getOutputStream().flush();
-
-        // Handle response
         int responseCode = conn.getResponseCode();
         if (responseCode == HttpURLConnection.HTTP_CREATED) {
             JOptionPane.showMessageDialog(this, "JIRA issue created successfully!");
